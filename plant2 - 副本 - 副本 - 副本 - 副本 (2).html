@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>彩虹天播种计算器</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ffc0d5 0%, #ff9bbb 30%, #f78ccb 70%, #f368c5 100%);
+  background-attachment: fixed;
+  padding-bottom: 70px;
+}
+
+.bubble {
+  position: fixed;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: float 8s infinite ease-in-out;
+  z-index: 0;
+}
+@keyframes float {
+  0% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50% { transform: translateY(-60px) scale(1.1); opacity: 0.8; }
+  100% { transform: translateY(0) scale(1); opacity: 0.6; }
+}
+
+/* 底部标签栏 */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: #fff;
+  display: flex;
+  z-index: 999;
+  box-shadow: 0 -2px 15px rgba(0,0,0,0.1);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: #999;
+  cursor: pointer;
+}
+.tab.active {
+  color: #e63982;
+  border-top: 3px solid #ff77a8;
+}
+
+/* 页面容器 */
+.page {
+  display: none;
+  padding: 20px;
+}
+.page.active {
+  display: block;
+}
+
+.card {
+  position: relative;
+  z-index: 10;
+  max-width: 500px;
+  margin: 40px auto;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  padding: 40px 32px;
+  box-shadow: 0 20px 60px rgba(240, 70, 170, 0.25),
+              0 0 100px rgba(255, 180, 210, 0.35);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.5);
+  animation: cardFade 1s ease forwards;
+}
+@keyframes cardFade {
+  from { opacity:0; transform: translateY(40px); }
+  to { opacity:1; transform: translateY(0); }
+}
+
+.title {
+  text-align: center;
+  font-size: 28px;
+  color: #e63982;
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(255, 160, 200, 0.5);
+  animation: glow 2s infinite alternate;
+}
+@keyframes glow {
+  from { text-shadow: 0 0 10px #ff9bbb, 0 0 20px #ff9bbb; }
+  to { text-shadow: 0 0 20px #ff77a8, 0 0 30px #ff77a8; }
+}
+
+.subtitle {
+  text-align: center;
+  color: #c2497d;
+  margin-bottom: 36px;
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #d63384;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid #ffb6c1;
+  outline: none;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: #fffafa;
+}
+input:focus {
+  border-color: #ff5e96;
+  box-shadow: 0 0 12px rgba(255, 94, 150, 0.3);
+  background: #fff;
+}
+
+.flex-row {
+  display: flex;
+  gap: 12px;
+}
+.flex-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.btn-calc {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(90deg, #ff77a8, #f74780);
+  color: white;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(255, 94, 150, 0.3);
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+.btn-calc:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(255, 94, 150, 0.4);
+}
+.btn-calc:active {
+  transform: translateY(0);
+}
+
+.result {
+  margin-top: 32px;
+  padding: 22px;
+  background: linear-gradient(135deg, #fff0f7, #ffe6f2);
+  border-radius: 16px;
+  border-left: 6px solid #ff5e96;
+  color: #b8286a;
+  font-size: 16px;
+  line-height: 1.7;
+  white-space: pre-line;
+  animation: resultFade 0.8s ease forwards;
+  display: none;
+}
+@keyframes resultFade {
+  from { opacity:0; transform: scale(0.95); }
+  to { opacity:1; transform: scale(1); }
+}
+
+/* 列表样式 */
+.plant-list {
+  max-width: 500px;
+  margin: 0 auto;
+}
+.list-title {
+  text-align: center;
+  color: #e63982;
+  margin-bottom: 20px;
+  font-size: 22px;
+}
+.sortable-list {
+  list-style: none;
+  margin-top: 16px;
+}
+.list-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-left: 5px solid #ff77a8;
+  cursor: grab;
+  position: relative;
+}
+.list-item:active {
+  cursor: grabbing;
+}
+.list-item h4 {
+  color: #e63982;
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+.list-item p {
+  color: #555;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.countdown {
+  color: #ff5e96;
+  font-weight: bold;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.del-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #ff4444;
+  color: #fff;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+}
+.export-btn {
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+/* 返回顶部按钮 */
+#toTop {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #ff77a8;
+  color: white;
+  font-size: 22px;
+  border: none;
+  box-shadow: 0 4px 15px rgba(255,119,168,0.4);
+  cursor: pointer;
+  z-index: 998;
+  display: none;
+}
+
+/* 文本导入导出 */
+.text-area {
+  width: 100%;
+  height: 120px;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #ffb6c1;
+  margin-top: 10px;
+  resize: none;
+  font-size: 14px;
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 浮动气泡 -->
+<div class="bubble" style="width:60px;height:60px;left:10%;top:20%;animation-delay:0s"></div>
+<div class="bubble" style="width:80px;height:80px;left:85%;top:15%;animation-delay:1s"></div>
+<div class="bubble" style="width:45px;height:45px;left:30%;top:80%;animation-delay:2s"></div>
+<div class="bubble" style="width:70px;height:70px;left:70%;top:70%;animation-delay:3s"></div>
+
+<!-- 返回顶部按钮 -->
+<button id="toTop" onclick="toTop()">⬆️</button>
+
+<!-- ====================== 计算器页面 ====================== -->
+<div class="page active" id="pageCalc">
+  <div class="card">
+    <h1 class="title">🌈 彩虹天播种计算器</h1>
+    <p class="subtitle">精准计算 · 粉色浪漫 · 准时开花</p>
+
+    <div class="form-group">
+      <label>彩虹天日期（目标开花日）</label>
+      <input type="date" id="rainbowDate" value="2026-04-19" />
+    </div>
+
+    <div class="flex-row">
+      <div class="form-group">
+        <label>开花时长（小时）</label>
+        <input type="number" id="growHours" placeholder="例：62" min="0">
+      </div>
+      <div class="form-group">
+        <label>开花时长（分钟）</label>
+        <input type="number" id="growMins" placeholder="例：52" min="0" max="59">
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="calc()">计算最佳播种时间</button>
+
+    <div class="result" id="result"></div>
+
+    <div class="form-group" style="margin-top:20px; display:none;" id="nameBox">
+      <label>花朵名称</label>
+      <input type="text" id="flowerName" placeholder="输入花朵名称">
+      <button class="btn-calc" style="background:linear-gradient(90deg,#7dd3fc,#38bdf8); margin-top:12px;" onclick="addToList()">加入种植列表</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== 种植计划页面 ====================== -->
+<div class="page" id="pageList">
+  <div class="plant-list">
+    <h3 class="list-title">🌸 我的种植计划</h3>
+    
+    <button class="export-btn" onclick="exportList()">导出 Excel</button>
+    <button class="export-btn" style="background:linear-gradient(90deg,#a78bfa,#8b5cf6);" onclick="toggleTextArea()">导出/导入 文字</button>
+    
+    <textarea class="text-area" id="textArea" placeholder="点击【导出文字】复制这里的内容\n粘贴后点击【导入文字】即可恢复"></textarea>
+    <div style="display:flex;gap:10px; margin-top:10px; display:none;" id="textBtnBox">
+      <button class="btn-calc" style="padding:12px; font-size:15px; background:linear-gradient(90deg,#34d399,#10b981);" onclick="exportTextPlan()">导出文字</button>
+      <button class="btn-calc" style="padding:12px; font-size:15px; background:linear-gradient(90deg,#f87171,#ef4444);" onclick="importTextPlan()">导入文字</button>
+    </div>
+
+    <ul class="sortable-list" id="sortList"></ul>
+  </div>
+</div>
+
+<!-- ====================== 底部标签栏 ====================== -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchPage('calc')">🌈 计算器</div>
+  <div class="tab" onclick="switchPage('list')">📋 种植计划</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+let currentPlantTime = null;
+let currentFlowerTime = null;
+let listData = JSON.parse(localStorage.getItem('plantList')) || [];
+
+// 标签页切换
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  if (page === 'calc') {
+    document.getElementById('pageCalc').classList.add('active');
+  } else {
+    document.getElementById('pageList').classList.add('active');
+  }
+  event.target.classList.add('active');
+}
+
+// 计算播种时间
+function calc() {
+  const dateVal = document.getElementById('rainbowDate').value;
+  const hours = Number(document.getElementById('growHours').value) || 0;
+  const mins = Number(document.getElementById('growMins').value) || 0;
+  const resEl = document.getElementById('result');
+  const nameBox = document.getElementById('nameBox');
+
+  if (!dateVal) {
+    resEl.innerText = "请选择彩虹天日期";
+    resEl.style.display = "block";
+    nameBox.style.display = "none";
+    return;
+  }
+
+  const target = new Date(dateVal + 'T00:05:00');
+  if (isNaN(target.getTime())) {
+    resEl.innerText = "日期格式不正确";
+    resEl.style.display = "block";
+    nameBox.style.display = "none";
+    return;
+  }
+
+  const totalMs = (hours * 3600 + mins * 60) * 1000;
+  if (totalMs <= 0) {
+    resEl.innerText = "请输入有效的开花时长";
+    resEl.style.display = "block";
+    nameBox.style.display = "none";
+    return;
+  }
+
+  const plant = new Date(target - totalMs);
+  currentPlantTime = plant;
+  currentFlowerTime = target;
+
+  function fmt(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const d_ = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const i = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d_} ${h}:${i}`;
+  }
+
+  const text = 
+`✅ 最佳播种时间：
+${fmt(plant)}
+
+🌸 即可准时在
+${fmt(target)}
+完美开花`;
+
+  resEl.innerText = text;
+  resEl.style.display = "block";
+  nameBox.style.display = "block";
+}
+
+// 添加到列表
+function addToList() {
+  const name = document.getElementById('flowerName').value.trim();
+  if (!name) {
+    alert("请输入花朵名称");
+    return;
+  }
+  if (!currentPlantTime || !currentFlowerTime) {
+    alert("请先计算时间");
+    return;
+  }
+
+  const item = {
+    id: Date.now(),
+    name,
+    plant: currentPlantTime.getTime(),
+    flower: currentFlowerTime.getTime()
+  };
+
+  listData.push(item);
+  saveList();
+  renderList();
+  document.getElementById('flowerName').value = '';
+  alert("已添加！可点击底部「种植计划」查看～");
+}
+
+function saveList() {
+  localStorage.setItem('plantList', JSON.stringify(listData));
+}
+
+function renderList() {
+  const ul = document.getElementById('sortList');
+  ul.innerHTML = '';
+
+  listData.forEach((item, index) => {
+    const li = document.createElement('li');
+    li.className = 'list-item';
+    li.dataset.id = item.id;
+
+    const pTime = new Date(item.plant);
+    const fTime = new Date(item.flower);
+
+    function fmt(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const d_ = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const i = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${d_} ${h}:${i}`;
+    }
+
+    li.innerHTML = `
+      <h4>${item.name}</h4>
+      <p>🌱 播种：${fmt(pTime)}</p>
+      <p>🌸 开花：${fmt(fTime)}</p>
+      <div class="countdown" id="cd-${item.id}"></div>
+      <button class="del-btn" onclick="delItem(${index})">×</button>
+    `;
+    ul.appendChild(li);
+    startCountdown(item.id, item.plant);
+  });
+}
+
+function delItem(index) {
+  if (confirm("确定删除？")) {
+    listData.splice(index, 1);
+    saveList();
+    renderList();
+  }
+}
+
+function startCountdown(id, target) {
+  const el = document.getElementById(`cd-${id}`);
+  function tick() {
+    const now = Date.now();
+    const diff = target - now;
+    if (diff <= 0) {
+      el.innerText = "✅ 时间到！可以播种啦！";
+      alert("🌸 播种时间到！快去种下你的花吧！");
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.innerText = `⏳ 倒计时：${h}时${m}分${s}秒`;
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// Excel导出
+function exportList() {
+  const data = [["花朵名称", "播种时间", "开花时间"]];
+  listData.forEach(item => {
+    const p = new Date(item.plant);
+    const f = new Date(item.flower);
+    function fmt(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const d_ = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const i = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${d_} ${h}:${i}`;
+    }
+    data.push([item.name, fmt(p), fmt(f)]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "种植计划");
+  XLSX.writeFile(wb, "彩虹天种植计划.xlsx");
+}
+
+// ---------------- 新增：文字导入导出 ----------------
+function toggleTextArea(){
+  const area = document.getElementById('textArea');
+  const btns = document.getElementById('textBtnBox');
+  const show = area.style.display !== 'block';
+  area.style.display = show ? 'block' : 'none';
+  btns.style.display = show ? 'flex' : 'none';
+}
+
+function exportTextPlan(){
+  const text = JSON.stringify(listData);
+  document.getElementById('textArea').value = text;
+  document.getElementById('textArea').select();
+  document.execCommand('copy');
+  alert('✅ 已导出为文字并复制！直接粘贴保存即可');
+}
+
+function importTextPlan(){
+  const text = document.getElementById('textArea').value.trim();
+  if(!text){
+    alert('请粘贴计划文字');
+    return;
+  }
+  try{
+    const data = JSON.parse(text);
+    if(confirm('导入会覆盖当前列表，确定继续吗？')){
+      listData = data;
+      saveList();
+      renderList();
+      alert('✅ 导入成功！');
+    }
+  }catch(e){
+    alert('❌ 文字格式错误，无法导入');
+  }
+}
+
+// ---------------- 新增：返回顶部 ----------------
+function toTop(){
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+window.onscroll = function(){
+  const btn = document.getElementById('toTop');
+  btn.style.display = window.scrollY > 200 ? 'block' : 'none';
+}
+
+// 初始化
+window.onload = function() {
+  renderList();
+  new Sortable(document.getElementById('sortList'), {
+    animation: 150,
+    onEnd: function(evt) {
+      const oldIndex = evt.oldIndex;
+      const newIndex = evt.newIndex;
+      const item = listData.splice(oldIndex, 1)[0];
+      listData.splice(newIndex, 0, item);
+      saveList();
+    }
+  });
+}
+</script>
+</body>
+</html>
