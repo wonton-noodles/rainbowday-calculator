@@ -282,6 +282,33 @@ input:focus {
   font-size: 14px;
   display: none;
 }
+
+/* 自定义提示弹窗（核心新增样式） */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px 30px;
+  color: #e63982;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 0 10px 30px rgba(240, 70, 170, 0.3);
+  z-index: 9999;
+  animation: toastShow 0.3s ease forwards, toastHide 0.3s ease forwards 3s;
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes toastShow {
+  from { opacity: 0; transform: translate(-50%, -60%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+@keyframes toastHide {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, -60%); }
+}
 </style>
 </head>
 
@@ -295,6 +322,9 @@ input:focus {
 
 <!-- 返回顶部按钮 -->
 <button id="toTop" onclick="toTop()">⬆️</button>
+
+<!-- 自定义提示弹窗（核心新增元素） -->
+<div class="toast" id="toast"></div>
 
 <!-- ====================== 计算器页面 ====================== -->
 <div class="page active" id="pageCalc">
@@ -338,7 +368,8 @@ input:focus {
     <button class="export-btn" onclick="exportList()">导出 Excel</button>
     <button class="export-btn" style="background:linear-gradient(90deg,#a78bfa,#8b5cf6);" onclick="toggleTextArea()">导出/导入 文字</button>
     
-    <textarea class="text-area" id="textArea" placeholder="点击【导出文字】复制这里的内容\n粘贴后点击【导入文字】即可恢复"></textarea>
+    <textarea class="text-area" id="textArea" placeholder="点击【导出文字】复制这里的内容
+粘贴后点击【导入文字】即可恢复"></textarea>
     <div style="display:flex;gap:10px; margin-top:10px; display:none;" id="textBtnBox">
       <button class="btn-calc" style="padding:12px; font-size:15px; background:linear-gradient(90deg,#34d399,#10b981);" onclick="exportTextPlan()">导出文字</button>
       <button class="btn-calc" style="padding:12px; font-size:15px; background:linear-gradient(90deg,#f87171,#ef4444);" onclick="importTextPlan()">导入文字</button>
@@ -454,7 +485,7 @@ function addToList() {
   saveList();
   renderList();
   document.getElementById('flowerName').value = '';
-  alert("已添加！可点击底部「种植计划」查看～");
+  showToast("✅ 已添加种植计划！"); // 替换alert为自定义提示
 }
 
 function saveList() {
@@ -495,21 +526,26 @@ function renderList() {
 }
 
 function delItem(index) {
-  if (confirm("确定删除？")) {
+  if (confirm("确定删除？")) { // 确认删除保留原生confirm（非高频操作）
     listData.splice(index, 1);
     saveList();
     renderList();
   }
 }
 
+// 核心修改：倒计时函数（替换alert+清除定时器）
 function startCountdown(id, target) {
   const el = document.getElementById(`cd-${id}`);
+  let timer; // 定时器ID，用于清除
   function tick() {
     const now = Date.now();
     const diff = target - now;
     if (diff <= 0) {
       el.innerText = "✅ 时间到！可以播种啦！";
-      alert("🌸 播种时间到！快去种下你的花吧！");
+      // 获取花朵名称，显示个性化提示
+      const flowerName = document.querySelector(`[data-id="${id}"] h4`)?.innerText || '花朵';
+      showToast(`🌸 ${flowerName} 播种时间到！快去种下你的花吧！`);
+      clearInterval(timer); // 清除定时器，避免重复提示
       return;
     }
     const h = Math.floor(diff / 3600000);
@@ -518,7 +554,18 @@ function startCountdown(id, target) {
     el.innerText = `⏳ 倒计时：${h}时${m}分${s}秒`;
   }
   tick();
-  setInterval(tick, 1000);
+  timer = setInterval(tick, 1000); // 保存定时器ID
+}
+
+// 核心新增：自定义提示框函数（自动消失，非阻塞）
+function showToast(text) {
+  const toast = document.getElementById('toast');
+  toast.innerText = text;
+  // 重置动画，确保多次调用都能正常显示
+  toast.style.animation = 'none';
+  setTimeout(() => {
+    toast.style.animation = 'toastShow 0.3s ease forwards, toastHide 0.3s ease forwards 3s';
+  }, 10);
 }
 
 // Excel导出
@@ -543,7 +590,7 @@ function exportList() {
   XLSX.writeFile(wb, "彩虹天种植计划.xlsx");
 }
 
-// ---------------- 新增：文字导入导出 ----------------
+// 文字导入导出
 function toggleTextArea(){
   const area = document.getElementById('textArea');
   const btns = document.getElementById('textBtnBox');
@@ -557,29 +604,29 @@ function exportTextPlan(){
   document.getElementById('textArea').value = text;
   document.getElementById('textArea').select();
   document.execCommand('copy');
-  alert('✅ 已导出为文字并复制！直接粘贴保存即可');
+  showToast('✅ 已导出为文字并复制！'); // 替换alert为自定义提示
 }
 
 function importTextPlan(){
   const text = document.getElementById('textArea').value.trim();
   if(!text){
-    alert('请粘贴计划文字');
+    showToast('❌ 请粘贴计划文字'); // 替换alert为自定义提示
     return;
   }
   try{
     const data = JSON.parse(text);
-    if(confirm('导入会覆盖当前列表，确定继续吗？')){
+    if(confirm('导入会覆盖当前列表，确定继续吗？')){ // 保留确认框
       listData = data;
       saveList();
       renderList();
-      alert('✅ 导入成功！');
+      showToast('✅ 导入成功！'); // 替换alert为自定义提示
     }
   }catch(e){
-    alert('❌ 文字格式错误，无法导入');
+    showToast('❌ 文字格式错误，无法导入'); // 替换alert为自定义提示
   }
 }
 
-// ---------------- 新增：返回顶部 ----------------
+// 返回顶部
 function toTop(){
   window.scrollTo({top:0, behavior:'smooth'});
 }
